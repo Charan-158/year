@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Circular Date Clock (Aligned)</title>
+  <style>
+    body {
+      margin: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      background: #222;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .clock-container {
+      position: relative;
+      width: 400px;
+      height: 400px;
+      border-radius: 50%;
+      background: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.6);
+    }
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+    }
+    #helloBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #00bfff;
+      color: #fff;
+      transition: 0.2s;
+    }
+    #helloBtn:hover { background: #009acd; }
+  </style>
+</head>
+<body>
+  <div class="clock-container">
+    <canvas id="clockCanvas" width="400" height="400"></canvas>
+  </div>
+
+  <button id="helloBtn">HELLO</button>
+
+  <script>
+    const canvas = document.getElementById("clockCanvas");
+    const ctx = canvas.getContext("2d");
+    const radius = canvas.width / 2;
+    ctx.translate(radius, radius);
+
+    let alignDate = false; // toggle with HELLO
+
+    function drawClock() {
+      ctx.clearRect(-radius, -radius, canvas.width, canvas.height);
+      const now = new Date();
+
+      const day = now.getDate();          // 1..31
+      const monthIndex = now.getMonth();  // 0..11
+      const weekdayIndex = now.getDay();  // 0..6
+
+      const monthName = now.toLocaleString('default', { month: 'short' }).toUpperCase();
+      const weekday    = now.toLocaleString('default', { weekday: 'short' }).toUpperCase();
+
+      // === DAYS RING ===
+      ctx.save();
+      // anchor "top" (12 o'clock) as reference
+      ctx.rotate(-Math.PI / 2);
+
+      // When aligning, rotate so the *current day* lands at top
+      // NOTE: loop rotates first, then draws -> index i is at i*step from top.
+      const dayStep = (2 * Math.PI) / 31;
+      if (alignDate) {
+        ctx.rotate(-day * dayStep); // puts day at top
+      }
+      ctx.font = "14px Arial";
+      for (let i = 1; i <= 31; i++) {
+        ctx.rotate(dayStep);
+        ctx.fillStyle = (i === day) ? "red" : "white";
+        ctx.fillText(i < 10 ? "0" + i : i, radius - 40, 5);
+      }
+      ctx.restore();
+
+      // === MONTHS RING ===
+      ctx.save();
+      ctx.rotate(-Math.PI / 2);
+      const months = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+      const monthStep = (2 * Math.PI) / 12;
+      if (alignDate) {
+        // loop uses i=0..11 and rotates BEFORE drawing,
+        // so monthIndex sits at (monthIndex+1)*step without offset.
+        ctx.rotate(-(monthIndex + 1) * monthStep);
+      }
+      for (let i = 0; i < 12; i++) {
+        ctx.rotate(monthStep);
+        ctx.fillStyle = (months[i] === monthName) ? "dodgerblue" : "white";
+        ctx.fillText(months[i], radius - 80, 5);
+      }
+      ctx.restore();
+
+      // === WEEKDAYS RING ===
+      ctx.save();
+      ctx.rotate(-Math.PI / 2);
+      const weekdays = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
+      const weekStep = (2 * Math.PI) / 7;
+      if (alignDate) {
+        // loop uses i=0..6 and rotates BEFORE drawing,
+        // so weekdayIndex sits at (weekdayIndex+1)*step without offset.
+        ctx.rotate(-(weekdayIndex + 1) * weekStep);
+      }
+      for (let i = 0; i < 7; i++) {
+        ctx.rotate(weekStep);
+        ctx.fillStyle = (weekdays[i] === weekday) ? "lime" : "white";
+        ctx.fillText(weekdays[i], radius - 120, 5);
+      }
+      ctx.restore();
+
+      // === CLOCK HANDS (not affected by ring alignment) ===
+      const hour = now.getHours();
+      const minute = now.getMinutes();
+      const second = now.getSeconds();
+
+      const hourAngle = ((hour % 12) * Math.PI) / 6 + (minute * Math.PI) / 360;
+      drawHand(hourAngle, 50, 6);
+
+      const minuteAngle = (minute * Math.PI) / 30 + (second * Math.PI) / 1800;
+      drawHand(minuteAngle, 70, 4);
+
+      const secondAngle = (second * Math.PI) / 30;
+      drawHand(secondAngle, 90, 2, "red");
+    }
+
+    function drawHand(pos, length, width, color = "white") {
+      ctx.beginPath();
+      ctx.lineWidth = width;
+      ctx.lineCap = "round";
+      ctx.moveTo(0, 0);
+      ctx.rotate(pos);
+      ctx.lineTo(length, 0);
+      ctx.strokeStyle = color;
+      ctx.stroke();
+      ctx.rotate(-pos);
+    }
+
+    // repaint every second
+    setInterval(drawClock, 1000);
+
+    // Toggle alignment on HELLO
+    document.getElementById("helloBtn").addEventListener("click", () => {
+      alignDate = !alignDate;
+      // draw immediately on toggle for snappy feel
+      drawClock();
+    });
+
+    // initial draw
+    drawClock();
+  </script>
+</body>
+</html>
